@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Research - FarmPulse</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script> <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="/static/js/app.js"></script>
+  <style>
+    body { background-color: #050505; color: #ecfdf5; font-family: 'Space Grotesk', sans-serif; padding-bottom: 100px; }
+    #canvas-container { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: -2; } /* BG Style */
+    .glass-panel { background: rgba(5, 10, 8, 0.75); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); }
+    .nav-link.active { color: #10b981; }
+    .nav-link.active .icon-box { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+  </style>
+</head>
+<body class="antialiased">
+  <div id="canvas-container"></div> <div class="max-w-7xl mx-auto px-4 pt-8 h-screen flex flex-col">
+    <div class="flex items-center gap-2 mb-6">
+        <div class="w-2 h-8 bg-blue-500 rounded-full shadow-[0_0_15px_#3b82f6]"></div>
+        <h1 class="text-3xl font-bold tracking-tight">Agri-Researcher</h1>
+    </div>
+
+    <div class="flex-1 glass-panel rounded-2xl mb-24 flex flex-col overflow-hidden relative">
+        <div class="absolute top-0 w-full h-1 bg-gradient-to-r from-blue-500 via-emerald-500 to-blue-500 opacity-50"></div>
+        <div id="researchChat" class="flex-1 overflow-y-auto p-6 space-y-4">
+            <div class="flex justify-start">
+                <div class="bg-white/5 border border-white/10 text-gray-300 p-3 rounded-2xl rounded-tl-sm max-w-[80%]">
+                    Hello! I have access to thousands of agricultural manuals. Ask me about crop rotation, pests, or soil types.
+                </div>
+            </div>
+        </div>
+        <div class="p-4 bg-black/20 border-t border-white/5">
+            <div class="flex gap-2">
+                <input id="researchInput" type="text" placeholder="Ask a research question..." 
+                    class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500/50 transition-all"
+                    onkeypress="if(event.key==='Enter') askResearcher()">
+                <button onclick="askResearcher()" class="bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-xl transition-colors">
+                    <span class="material-icons">send</span>
+                </button>
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <nav class="fixed bottom-0 left-0 right-0 glass-panel border-t border-white/5 h-20 z-50 rounded-t-2xl md:rounded-none backdrop-blur-xl">
+    <div class="flex justify-center items-center h-full gap-8 md:gap-16">
+        
+        <a href="/dashboard" class="nav-link flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors cursor-pointer">
+            <span class="material-icons text-xl">dashboard</span><span class="text-[10px] font-bold uppercase">Dash</span>
+        </a>
+        <a href="/prediction" class="nav-link flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors cursor-pointer">
+            <span class="material-icons text-xl">show_chart</span><span class="text-[10px] font-bold uppercase">Predict</span>
+        </a>
+
+        <a href="/static/research.html" class="nav-link active flex flex-col items-center gap-1 group cursor-pointer">
+            <div class="icon-box w-10 h-8 rounded-lg border border-transparent flex items-center justify-center transition-all">
+                <span class="material-icons text-xl">menu_book</span>
+            </div>
+            <span class="text-[10px] font-bold uppercase tracking-wide">Research</span>
+        </a>
+
+        <a href="/static/doctor.html" class="nav-link flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors cursor-pointer">
+            <span class="material-icons text-xl">local_hospital</span><span class="text-[10px] font-bold uppercase">Doctor</span>
+        </a>
+
+    </div>
+  </nav>
+
+  <script>
+    const initThreeJS = () => {
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x050505, 0.035); 
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 8; camera.position.y = 2;
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        container.appendChild(renderer.domElement);
+
+        const geoPlane = new THREE.PlaneGeometry(120, 120, 50, 50);
+        const pos = geoPlane.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+            const x = pos.getX(i); const y = pos.getY(i);
+            pos.setZ(i, Math.sin(x/10) * Math.cos(y/10) * 2.5 + Math.random() * 0.1);
+        }
+        geoPlane.computeVertexNormals();
+        const matPlane = new THREE.MeshStandardMaterial({ color: 0x022c22, emissive: 0x065f46, emissiveIntensity: 0.15, wireframe: true, transparent: true, opacity: 0.12 });
+        const terrain = new THREE.Mesh(geoPlane, matPlane);
+        terrain.rotation.x = -Math.PI / 2.1; terrain.position.y = -3;
+        scene.add(terrain);
+
+        const particleGeo = new THREE.BufferGeometry();
+        const pArray = new Float32Array(750); // 250 * 3
+        for(let i=0; i<750; i++) pArray[i] = (Math.random() - 0.5) * 60;
+        particleGeo.setAttribute('position', new THREE.BufferAttribute(pArray, 3));
+        const particles = new THREE.Points(particleGeo, new THREE.PointsMaterial({ size: 0.08, color: 0x34d399, transparent: true, opacity: 0.6 }));
+        scene.add(particles);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.1));
+        const pl = new THREE.PointLight(0x10b981, 2, 60); pl.position.set(0, 5, 5); scene.add(pl);
+
+        let time = 0;
+        const animate = () => { requestAnimationFrame(animate); time += 0.003; terrain.position.z = (Date.now() * 0.001) % 4; particles.rotation.y = time * 0.05; renderer.render(scene, camera); };
+        animate();
+        window.addEventListener('resize', () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+    };
+    document.addEventListener("DOMContentLoaded", initThreeJS);
+  </script>
+</body>
+</html>

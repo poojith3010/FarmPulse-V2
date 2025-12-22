@@ -1,0 +1,78 @@
+/* --- Base & Typography --- */
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    color: #E5E7EB;
+}
+
+.font-headings {
+    font-family: 'Space Grotesk', sans-serif;
+}
+
+/* --- Active Border Animation --- */
+@keyframes rotate-gradient {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.active-border {
+    position: relative;
+    overflow: hidden;
+    padding: 2px; /* Adjust padding to control border thickness */
+}
+
+.active-border::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(
+        from 0deg,
+        transparent 0%,
+        transparent 50%,
+        #34d399 90%,
+        #a7f3d0 95%,
+        #34d399 100%
+    );
+    animation: rotate-gradient 6s linear infinite;
+    z-index: 1;
+}
+
+.active-border > * {
+    position: relative;
+    z-index: 2;
+    background-color: #000; /* Or your card background color */
+    border-radius: inherit; /* Match parent's border radius */
+}
+
+
+/* --- Global Scrollbar --- */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent; /* Invisible track */
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: rgba(52, 211, 153, 0.5);
+    border-radius: 10px;
+    border: 1px solid rgba(52, 211, 153, 0.7);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(52, 211, 153, 0.7);
+}
+
+/* For Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(52, 211, 153, 0.7) transparent;
+}

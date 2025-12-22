@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Connect Device - FarmPulse</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script src="/static/js/app.js"></script>
+  <style>
+    @keyframes gradient-animation { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    .animated-gradient { background: linear-gradient(-45deg, #34d399, #2dd4bf, #34d399, #a7f3d0); background-size: 400% 400%; animation: gradient-animation 15s ease infinite; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+    .fade-in-delay-1 { animation-delay: 0.1s; } .fade-in-delay-2 { animation-delay: 0.2s; }
+    :root { --background-start-rgb: 0, 10, 5; --background-end-rgb: 0, 24, 12; --foreground-rgb: 240, 240, 240; --card-background-rgba: 255, 255, 255, 0.03; --card-border-rgba: 255, 255, 255, 0.1; }
+    body { background: linear-gradient(to bottom, rgb(var(--background-start-rgb)), rgb(var(--background-end-rgb))); color: rgb(var(--foreground-rgb)); }
+    .glass-card { background: rgba(var(--card-background-rgba)); backdrop-filter: blur(20px); border: 1px solid rgba(var(--card-border-rgba)); }
+    .form-input { background: rgba(0,0,0,0.25); border: 1px solid transparent; color: rgb(var(--foreground-rgb)); transition: border-color 0.3s; }
+    .form-input:focus { outline: none; border-color: rgba(52, 211, 153, 0.7); }
+  </style>
+</head>
+<body class="text-white flex flex-col items-center justify-center min-h-screen p-6">
+
+    <div class="w-full max-w-sm text-center">
+      <div class="mb-6 fade-in">
+          <span class="material-icons text-6xl text-emerald-400">vpn_key</span>
+      </div>
+      <h1 class="text-3xl font-bold text-white mb-2 font-headings fade-in">
+        Enter Device Key
+      </h1>
+      <p class="text-gray-400 mb-8 fade-in">Enter the 4-digit key displayed on your device.</p>
+      
+      <div class="glass-card rounded-2xl p-6 fade-in fade-in-delay-1">
+        <div class="space-y-4 text-left">
+          
+          <div>
+            <label class="text-sm text-gray-400 ml-1">Device Key</label>
+            <input id="deviceKey" type="text" placeholder="e.g. 8492" maxlength="4" class="w-full p-3 form-input rounded-lg font-mono text-center text-2xl tracking-widest mt-1" />
+          </div>
+
+          <button id="connectBtn" class="w-full bg-emerald-500 text-white p-3 rounded-lg font-semibold transition-transform hover:scale-105 !mt-6 shadow-lg shadow-emerald-500/20">
+            Activate & Link
+          </button>
+        </div>
+      </div>
+    </div>
+
+  <script>
+    document.getElementById("connectBtn").addEventListener("click", async () => {
+        const key = document.getElementById("deviceKey").value.trim();
+
+        if (!key || key.length < 4) return alert("Please enter the 4-digit key.");
+
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) {
+            alert("⚠️ Session expired. Please login again.");
+            window.location.href = "/";
+            return;
+        }
+
+        const btn = document.getElementById("connectBtn");
+        btn.disabled = true;
+        btn.textContent = "Verifying...";
+
+        try {
+            // 1. Send Key to Backend
+            const response = await fetch('/api/verify-device-key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mac_key: key })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                alert("❌ " + result.message);
+                btn.disabled = false;
+                btn.textContent = "Activate & Link";
+                return;
+            }
+
+            // 2. Backend verified it and returned the MAC address
+            // Now link this MAC to the user's profile
+            const macAddress = result.mac_address;
+            btn.textContent = "Linking...";
+            
+            const { error: updateError } = await supabaseClient
+                .from('profiles')
+                .update({ mac_address: macAddress })
+                .eq('id', user.id);
+
+            if (updateError) {
+                console.error(updateError);
+                alert("❌ Database Error: " + updateError.message);
+                btn.disabled = false;
+            } else {
+                alert("✅ Device Activated! Redirecting...");
+                window.location.href = "/dashboard";
+            }
+
+        } catch (err) {
+            console.error(err);
+            alert("❌ Network Error");
+            btn.disabled = false;
+        }
+    });
+
+  </script>
+</body>
+</html>
