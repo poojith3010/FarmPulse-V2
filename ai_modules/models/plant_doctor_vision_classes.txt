@@ -1,0 +1,8 @@
+algal_leaf
+anthracnose
+bird_eye_spot
+brown_blight
+gray_light
+healthy
+red_leaf_spot
+white_spot

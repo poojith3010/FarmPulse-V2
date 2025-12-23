@@ -1,0 +1,66 @@
+{
+  "algal_leaf": {
+    "name": "Algal Leaf Spot (Red Rust)",
+    "cause": "Cephaleuros virescens (Parasitic Alga)",
+    "symptoms": "Orange or reddish-brown velvety spots on leaves. Common in humid conditions or weak plants.",
+    "organic_control": "Prune overcrowded branches to improve air circulation. Ensure proper soil drainage.",
+    "chemical_control": "Spray Copper Oxychloride (0.25%) or Bordeaux mixture.",
+    "prevention": "Avoid water stress and ensure balanced potash (K) application."
+  },
+  "anthracnose": {
+    "name": "Anthracnose",
+    "cause": "Colletotrichum fungal species",
+    "symptoms": "Brown, necrotic lesions on leaves that may spread. Leaves often dry up and fall.",
+    "organic_control": "Remove and burn infected leaves. Apply Neem cake to soil.",
+    "chemical_control": "Spray Thiophanate Methyl or Copper Oxychloride.",
+    "prevention": "Maintain proper shade regulation and avoid waterlogging."
+  },
+  "bird_eye_spot": {
+    "name": "Bird's Eye Spot",
+    "cause": "Cercospora theae",
+    "symptoms": "Small circular spots with a gray center and reddish-brown margin (looks like an eye).",
+    "organic_control": "Remove infected leaves. Maintain proper shade to lower temperature.",
+    "chemical_control": "Spray Copper fungicides or Mancozeb.",
+    "prevention": "Ensure adequate Potassium (K) levels in fertilizer."
+  },
+  "brown_blight": {
+    "name": "Brown Blight",
+    "cause": "Colletotrichum camelliae",
+    "symptoms": "Brown patches with concentric rings and tiny black dots.",
+    "organic_control": "Remove infected foliage. Improve air circulation.",
+    "chemical_control": "Spray Copper Oxychloride or Carbendazim.",
+    "prevention": "Protect plants from sun scorch and mechanical injury."
+  },
+  "gray_light": {
+    "name": "Gray Blight",
+    "cause": "Pestalotiopsis sp.",
+    "symptoms": "Similar to Brown Blight but spots turn gray/white with concentric rings.",
+    "organic_control": "Clean plucking table. Remove infected debris.",
+    "chemical_control": "Spray Copper Oxychloride or Thio-phanate methyl.",
+    "prevention": "Avoid injury to leaves during plucking."
+  },
+  "red_leaf_spot": {
+    "name": "Red Leaf Spot (Purple Mite/Fungal)",
+    "cause": "Complex (Fungal or Mite damage)",
+    "symptoms": "Reddish-purple discoloration or lesions on mature leaves.",
+    "organic_control": "Spray Neem Oil (3%) or wettable sulfur.",
+    "chemical_control": "Specific acaricides if mite-induced, or Copper fungicides.",
+    "prevention": "Monitor during dry seasons."
+  },
+  "white_spot": {
+    "name": "White Spot / Blister Blight",
+    "cause": "Fungal (likely Exobasidium or similar)",
+    "symptoms": "Small white or translucent blisters/spots on young leaves.",
+    "organic_control": "Reduce humidity. Prune infected shoots immediately.",
+    "chemical_control": "Spray Copper Oxychloride mixed with Nickel Chloride.",
+    "prevention": "Adjust shade trees to allow more sunlight."
+  },
+  "healthy": {
+    "name": "Healthy Tea Leaf",
+    "cause": "N/A",
+    "symptoms": "Leaf is green, vibrant, and free of lesions.",
+    "organic_control": "Continue routine care.",
+    "chemical_control": "None needed.",
+    "prevention": "Maintain NPK schedule."
+  }
+}

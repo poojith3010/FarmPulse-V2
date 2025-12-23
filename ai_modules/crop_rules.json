@@ -1,0 +1,175 @@
+{
+  "metadata": {
+    "project": "Plant Doctor — Nutrient Advisor (Part A)",
+    "prototype_mode": true,
+    "single_plot_id": "main_plot",
+    "crop": "Tea (Camellia sinensis)",
+    "variety_notes": "Generic Camellia sinensis profile. For cultivar-specific tuning add cultivar overrides later.",
+    "location_profile": {
+      "region_name": "Kotagiri Hills, Nilgiris, Tamil Nadu, India",
+      "coordinates_guess": { "lat": 11.4, "lon": 76.8 },
+      "elevation_m": 1950,
+      "climate_summary": {
+        "avg_annual_rainfall_mm": 1500,
+        "avg_temperature_celsius_range": { "annual_min": 10, "annual_max": 25 },
+        "notes": "Cool, high-rainfall hill climate suitable for Nilgiris tea cultivation; supports year-round plucking cycles with seasonal flushes."
+      }
+    },
+    "last_updated": "2025-11-16"
+  },
+
+  "soil_and_environment_targets": {
+    "optimal_soil_pH": {
+      "preferred_range": { "min": 4.5, "max": 5.5 },
+      "acceptable_range": { "min": 4.2, "max": 6.0 },
+      "effect_notes": "Tea prefers strongly acidic soil; pH above ~6 may encourage flowering and reduce leaf quality. Acidification/liming actions should be applied with caution and based on soil test."
+    },
+    "organic_matter": {
+      "preferred_pct": { "min": 2.0, "target": 3.0, "notes": "% organic carbon / organic matter is desirable; long-term organic amendments stabilise pH and nutrient supply." }
+    },
+    "soil_moisture": {
+      "typical_irrigation_guidance": "Maintain evenly moist, well-drained soil. Avoid waterlogging; ensure drainage on slopes.",
+      "field_sensor_metrics_expected": [
+        { "metric": "volumetric_water_content", "units": "m3/m3", "typical_range": { "min": 0.20, "optimum": 0.30, "max": 0.45 }, "notes": "Adjust by soil texture." }
+      ]
+    }
+  },
+
+  "nutrient_targets_by_growth_stage": {
+    "growth_stages": {
+      "establishment": {
+        "description": "0–12 months after planting; root establishment and early canopy build",
+        "recommended_annual_dose_kg_per_ha": { "N": 250, "P2O5": 80, "K2O": 250 },
+        "application_timing_notes": "Split applications; first manuring 2 months after planting. Emphasise P placement to encourage root growth."
+      },
+      "vegetative_maintenance": {
+        "description": "Established bushes between pruning cycles (main growth period for leaf yield)",
+        "recommended_annual_dose_kg_per_ha": { "N": 300, "P2O5": 100, "K2O": 300 },
+        "application_timing_notes": "Divide N into multiple split dressings coinciding with flushes; apply K and P as basal + split."
+      },
+      "high_demand_plucking_flush": {
+        "description": "During active plucking/production flushes when leaf removal is high",
+        "recommended_annual_dose_kg_per_ha": { "N": 350, "P2O5": 120, "K2O": 350 },
+        "application_timing_notes": "Topdress N near active roots ahead of major flushes; consider foliar feeds if deficit is acute."
+      },
+      "mature_low_input": {
+        "description": "Mature, older bushes maintained at conservative input levels",
+        "recommended_annual_dose_kg_per_ha": { "N": 150, "P2O5": 50, "K2O": 150 },
+        "application_timing_notes": "Reduce N rates for low-yield objectives; maintain K to preserve leaf quality."
+      }
+    }
+  },
+
+  "soil_test_interpretation": {
+    "notes": "Soil tests are reported differently across labs. Use your lab's conversion tables. The bands below are common regional guidance.",
+    "bands_kg_per_ha": {
+      "available_N": { "low": { "upper": 240 }, "medium": { "min": 240, "max": 480 }, "high": { "min": 480 } },
+      "available_P2O5": { "low": { "upper": 11 }, "medium": { "min": 11, "max": 22 }, "high": { "min": 22 } },
+      "available_K2O": { "low": { "upper": 120 }, "medium": { "min": 120, "max": 280 }, "high": { "min": 280 } },
+      "note": "Bands are indicative; always use local lab interpretation for final decisions."
+    },
+    "ppm_to_kg_per_ha_note": "If sensor returns ppm in soil solution, do not equate directly to kg/ha without calibration to local lab data."
+  },
+
+  "sensor_integration_spec": {
+    "expected_sensor_types": [
+      { "type": "soil_nitrate_sensor", "units": "ppm (NO3-N or NO3)", "notes": "Calibrate to lab results; sensors measure mineral N not total N." },
+      { "type": "soil_phosphate_sensor", "units": "ppm (PO4)", "notes": "Soil solution P is highly variable; rely on lab Bray/Olsen tests where possible." },
+      { "type": "soil_potassium_sensor", "units": "ppm (K)", "notes": "Exchangeable K sensors exist; validate with lab flame photometer." },
+      { "type": "soil_pH", "units": "pH", "notes": "Direct reading is reliable if probe is maintained." },
+      { "type": "moisture", "units": "volumetric_water_content_m3/m3", "notes": "Useful to time fertilizer applications and avoid loss." }
+    ],
+    "sensor_data_retention_window_minutes": 60,
+    "latest_reading_query_example": "SELECT sensor_type, value, units, timestamp FROM sensor_readings WHERE plot_id = 'main_plot' ORDER BY timestamp DESC LIMIT 1",
+    "calibration_guidance": "Pair sensor readings with periodic lab soil tests (every 3–6 months) and derive calibration factors for the plot. Perform at least 6 matched pairs (sensor vs lab) to build a calibration curve for Kotagiri's acidic, organic soils."
+  },
+
+  "rule_set": [
+    {
+      "id": "rule_basic_n_deficit",
+      "description": "Simple check for N deficit in flowering/production stage using numeric threshold.",
+      "conditions": {
+        "crop": "tea",
+        "growth_stage_any_of": ["vegetative_maintenance", "high_demand_plucking_flush"],
+        "sensor": { "soil_nitrogen_ppm_or_kg_per_ha": { "less_than_or_equal_to": 250 } }
+      },
+      "explanation": "If available mineral N is below threshold for active growth, recommend N application.",
+      "action_template": "Yes. The sensor for the plot shows available nitrogen at {live_N}{units}, which is below the target {target_N}{target_units} for {growth_stage}. Apply a nitrogen supply equivalent to {suggested_N_rate_kg_per_ha} kg/ha (split into two applications during the next flushes). Suggested formulation: urea or ammonium sulfate; consider up to 30% replacement with validated biofertilizer if used.",
+      "computed_fields_hint": {
+        "target_N": "Use growth_stage recommended_annual_dose_kg_per_ha.N",
+        "suggested_N_rate_kg_per_ha": "Round(max((target_N - measured_soil_N_equivalent), minimum_topdress), 0)"
+      }
+    },
+    {
+      "id": "rule_p_deficit",
+      "description": "Phosphorus deficiency decision",
+      "conditions": {
+        "crop": "tea",
+        "sensor": { "available_P2O5_kg_per_ha": { "less_than": 40 } }
+      },
+      "action_template": "Yes. The plot has low available phosphorus ({live_P}{units}). Apply rock phosphate or DAP as localized placement to reach the target {target_P} kg/ha. For strongly P-fixing Kotagiri soils, prefer placement/banding and organic P sources.",
+      "notes": "P-fixation common in acidic soils; placement improves availability."
+    },
+    {
+      "id": "rule_k_deficit",
+      "description": "Potassium deficiency decision",
+      "conditions": {
+        "crop": "tea",
+        "sensor": { "available_K2O_kg_per_ha": { "less_than": 120 } }
+      },
+      "action_template": "Yes. Potassium is low ({live_K}{units}). Apply muriate of potash (MOP) or sulfate of potash to reach target {target_K} kg/ha. Potassium supports shoot strength and leaf quality."
+    },
+    {
+      "id": "rule_pH_out_of_band",
+      "description": "Soil pH out of preferred band",
+      "conditions": {
+        "sensor": { "soil_pH": { "less_than": 4.2, "or_greater_than": 6.0 } }
+      },
+      "action_template": "Soil pH is {live_pH}. Tea prefers pH 4.5–5.5. If pH < 4.2, consider cautious liming only after a lab-based recommendation. If pH > 6.0, investigate cause and consult extension; avoid alkaline amendments unless advised."
+    },
+    {
+      "id": "rule_insufficient_data",
+      "description": "Fallback when sensor types are missing or data are stale",
+      "conditions": {
+        "sensor_freshness_minutes": { "greater_than": 10080 }
+      },
+      "action_template": "I can't make a confident nutrient recommendation because recent sensor data (N/P/K/pH) are missing or older than 7 days. Please trigger a new sensor reading or upload the latest lab soil test (date: {latest_lab_date})."
+    }
+  ],
+
+  "response_templates_and_placeholders": {
+    "placeholders": [
+      "{crop}", "{growth_stage}", "{live_N}", "{live_P}", "{live_K}", "{units}", "{target_N}", "{target_P}", "{target_K}", "{suggested_N_rate_kg_per_ha}", "{latest_lab_date}", "{live_pH}"
+    ],
+    "recommendation_style_guidelines": {
+      "tone": "short, precise, actionable",
+      "example_yes_response": "Yes — nitrogen is deficient. Sensor: N={live_N}{units}; target for {growth_stage}: {target_N}{target_units}. Recommend applying {suggested_N_rate_kg_per_ha} kg/ha N (split into 2 applications over the next 4–6 weeks).",
+      "example_no_response": "No — nutrient levels are within target ranges for the current growth stage. Continue routine manuring schedule and recheck sensors or lab test in 8–12 weeks or after heavy rains."
+    }
+  },
+
+  "fertilizer_products_and_conversion": {
+    "common_fertilizers": [
+      { "name": "Urea", "nutrient_content": { "N_pct": 46 }, "notes": "Quick soluble N source; use split applications" },
+      { "name": "DAP (Diammonium phosphate)", "nutrient_content": { "N_pct": 18, "P2O5_pct": 46 }, "notes": "Good P source; avoid seedling contact" },
+      { "name": "MOP (Muriate of Potash)", "nutrient_content": { "K2O_pct": 60 }, "notes": "Common K source; apply away from collar" },
+      { "name": "Rock phosphate", "notes": "Slow release P; recommended placement for acidic, P-fixing soils" }
+    ],
+    "unit_conversions": {
+      "kg_per_acre_to_kg_per_ha": 2.47105,
+      "note": "TNAU tables often give kg/acre; conversion factor used = 1 acre = 0.404686 ha."
+    }
+  },
+
+  "operational_notes": {
+    "lab_validation_frequency_months": 3,
+    "sensor_validation_pairs_required": 6,
+    "safety_notes": "Avoid broadcasting urea immediately before heavy rain to reduce leaching. For steep Kotagiri slopes, prefer banding and mulching to reduce runoff and nutrient loss.",
+    "organic_integration": "Encourage green manures, composts and biofertilizers; validated biofertilizer use can replace part of chemical fertilizer needs (validate locally)."
+  },
+
+  "examples_and_sql_snippets": {
+    "how_to_query_latest_readings": "SELECT sensor_type, value, units, timestamp FROM sensor_readings WHERE plot_id = 'main_plot' ORDER BY timestamp DESC LIMIT 1;",
+    "how_to_get_crop_and_stage": "SELECT crop_type, growth_stage FROM plots WHERE plot_id = 'main_plot' LIMIT 1;"
+  }
+}

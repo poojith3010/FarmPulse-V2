@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agri-Gems | AI Farm Advisor</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="dashboard-container">
+        
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fas fa-leaf"></i>
+                <h2>Agri-Gems</h2>
+            </div>
+            
+            <nav>
+                <button class="nav-btn active" id="nav-gem1" onclick="switchTab('gem1')">
+                    <i class="fas fa-chart-line"></i> <span>Yield Forecaster</span>
+                </button>
+                <button class="nav-btn" id="nav-gem2" onclick="switchTab('gem2')">
+                    <i class="fas fa-book-open"></i> <span>Agri-Researcher</span>
+                </button>
+                <button class="nav-btn" id="nav-gem3" onclick="switchTab('gem3')">
+                    <i class="fas fa-user-md"></i> <span>Plant Doctor</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <p>Powered by <br><strong>Local Offline AI</strong></p>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            
+            <header>
+                <div class="greeting">
+                    <h1>Dashboard</h1>
+                    <p>Welcome back, Farm Manager.</p>
+                </div>
+                <div class="status-badge">
+                    <span class="dot"></span> Systems Online
+                </div>
+            </header>
+
+            <section id="gem1" class="tab-content active">
+                <div class="content-grid">
+                    <div class="card input-card">
+                        <div class="card-header-row">
+                            <h3><i class="fas fa-calendar-alt"></i> Seasonal Forecast</h3>
+                        </div>
+                        
+                        <p style="color:var(--text-secondary); margin-bottom:20px; font-size: 0.9rem;">
+                            Select a specific date to predict the harvest yield based on 10 years of historical patterns.
+                        </p>
+                        
+                        <div class="input-group full-width">
+                            <label>Target Harvest Date</label>
+                            <input type="date" id="forecast-date" class="glass-input">
+                        </div>
+
+                        <div class="input-group full-width" style="margin-top: 15px;">
+                            <label>Farm Size (Acres)</label>
+                            <input type="number" id="farm-size" value="4" step="0.5" class="glass-input" placeholder="e.g. 2.5">
+                        </div>
+
+                        <button class="action-btn" onclick="getSeasonalForecast()" style="margin-top: 20px;">
+                            <i class="fas fa-search"></i> Predict Yield
+                        </button>
+                    </div>
+
+                    <div class="card result-card">
+                        <h3><i class="fas fa-chart-line"></i> Forecast Analysis</h3>
+                        
+                        <div id="yield-result" class="result-box">
+                            <div class="yield-value" id="yield-output" style="font-size: 2.5rem; font-weight: 700; color: var(--primary);">-- KG</div>
+                            <p>Expected Yield</p>
+                        </div>
+
+                        <div class="chat-container" id="yield-chat" style="
+                            margin-top: 20px; 
+                            height: 150px; 
+                            border-top: 1px solid rgba(255,255,255,0.1); 
+                            padding-top: 15px;">
+                            
+                            <div class="bot-msg">
+                                <i class="fas fa-robot"></i>
+                                <div class="msg-text">Select a date to see the seasonal forecast.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="gem2" class="tab-content">
+                <div class="card chat-layout">
+                    <div class="chat-header">
+                        <h3><i class="fas fa-robot"></i> AI Research Assistant</h3>
+                        <span class="badge">RAG Enabled</span>
+                    </div>
+                    <div class="chat-container" id="researcher-chat">
+                        <div class="bot-msg">
+                            <i class="fas fa-robot"></i>
+                            <div class="msg-text">Hello! I have access to thousands of agricultural manuals. Ask me anything.</div>
+                        </div>
+                    </div>
+                    <div class="input-area">
+                        <input type="text" id="researcher-input" placeholder="Ask about pruning, soil types, or pests...">
+                        <button onclick="askResearcher()"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="gem3" class="tab-content">
+                
+                <div class="doctor-controls">
+                    <button class="switch-btn active" id="btn-doc-text" onclick="switchDoctor('text')">
+                        <i class="fas fa-flask"></i> Nutrient Advisor
+                    </button>
+                    <button class="switch-btn" id="btn-doc-vision" onclick="switchDoctor('vision')">
+                        <i class="fas fa-camera"></i> Visual Diagnosis
+                    </button>
+                </div>
+
+                <div id="doc-text-panel" class="panel-fade">
+                    <div class="card chat-layout">
+                        <div class="chat-header">
+                            <h3><i class="fas fa-seedling"></i> Soil Nutrient Sensor Link</h3>
+                            <span class="badge pulse">Live Sensors</span>
+                        </div>
+                        <div class="chat-container" id="nutrient-chat">
+                            <div class="bot-msg">
+                                <i class="fas fa-robot"></i>
+                                <div class="msg-text">I am connected to your Supabase sensors. Ask "Does my plot need fertilizer?"</div>
+                            </div>
+                        </div>
+                        <div class="input-area">
+                            <input type="text" id="nutrient-input" placeholder="Check sensor status...">
+                            <button onclick="askNutrient()"><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="doc-vision-panel" class="panel-fade hidden">
+                    <div class="content-grid">
+                        <div class="card upload-card">
+                            <h3>Upload Leaf Image</h3>
+                            
+                            <div class="upload-zone">
+                                <img id="image-preview" class="hidden" alt="Preview">
+                                
+                                <div id="upload-placeholder">
+                                    <i class="fas fa-cloud-upload-alt fa-3x"></i>
+                                    <p>Click here to select an image</p>
+                                </div>
+
+                                <input type="file" id="leaf-upload" accept="image/*" onchange="previewImage(event)">
+                            </div>
+
+                            <button class="action-btn" onclick="scanLeaf()">Analyze Leaf</button>
+                        </div>
+
+                        <div class="card result-card">
+                            <h3><i class="fas fa-stethoscope"></i> Diagnosis</h3>
+                            <div id="vision-result" class="result-box empty-state">
+                                <i class="fas fa-microscope fa-3x"></i>
+                                <p>Upload an image to start the scan.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
