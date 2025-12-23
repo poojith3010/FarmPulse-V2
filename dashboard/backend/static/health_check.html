@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Agri-Gems Diagnostics</title>
+    <style>
+        body { background: #111; color: #fff; font-family: monospace; padding: 20px; }
+        .box { border: 1px solid #333; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
+        .status { font-weight: bold; }
+        .success { color: #0f0; }
+        .error { color: #f00; }
+        button { cursor: pointer; padding: 5px 10px; background: #333; color: white; border: 1px solid #555; }
+        button:hover { background: #555; }
+    </style>
+</head>
+<body>
+    <h1>🔧 System Diagnostics (Fixed)</h1>
+    <p>Open your Browser Console (F12) to see detailed errors.</p>
+
+    <div class="box">
+        <h3>Gem 1: Yield (Port 8004)</h3>
+        <button onclick="testGem1()">Ping Forecast</button>
+        <div id="gem1-status" class="status">Waiting...</div>
+    </div>
+
+    <div class="box">
+        <h3>Gem 2: Researcher (Port 8001)</h3>
+        <button onclick="testGem2()">Ping Chat</button>
+        <div id="gem2-status" class="status">Waiting...</div>
+    </div>
+
+    <div class="box">
+        <h3>Gem 3A: Doctor Text (Port 8002)</h3>
+        <button onclick="testGem3A()">Ping Chat</button>
+        <div id="gem3a-status" class="status">Waiting...</div>
+    </div>
+
+    <div class="box">
+        <h3>Gem 3B: Doctor Vision (Port 8003)</h3>
+        <input type="file" id="test-img">
+        <button onclick="testGem3B()">Ping Vision</button>
+        <div id="gem3b-status" class="status">Waiting...</div>
+    </div>
+
+    <script>
+        // CONFIG
+        const PORTS = {
+            GEM1: "http://127.0.0.1:8004",
+            GEM2: "http://127.0.0.1:8001",
+            GEM3A: "http://127.0.0.1:8002",
+            GEM3B: "http://127.0.0.1:8003"
+        };
+
+        // TEST GEM 1
+        async function testGem1() {
+            const status = document.getElementById('gem1-status');
+            status.innerText = "Pinging...";
+            try {
+                // Correct Endpoint: /forecast-yield
+                // Correct Keys: target_date, farm_size_acres
+                const res = await fetch(`${PORTS.GEM1}/forecast-yield`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ target_date: "2024-12-01", farm_size_acres: 4.0 })
+                });
+                const data = await res.json();
+                status.innerText = res.ok ? "✅ ONLINE: " + data.predicted_yield_kg + "kg" : "❌ ERROR: " + JSON.stringify(data);
+                status.className = res.ok ? "status success" : "status error";
+            } catch (e) {
+                status.innerText = "❌ FAILED: " + e.message;
+                status.className = "status error";
+            }
+        }
+
+        // TEST GEM 2
+        async function testGem2() {
+            const status = document.getElementById('gem2-status');
+            status.innerText = "Pinging...";
+            try {
+                // FIXED Endpoint: /ask-advisor (was /ask)
+                // FIXED Key: question (was query)
+                const res = await fetch(`${PORTS.GEM2}/ask-advisor`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ question: "Hello" })
+                });
+                const data = await res.json();
+                status.innerText = res.ok ? "✅ ONLINE" : "❌ ERROR: " + JSON.stringify(data);
+                status.className = res.ok ? "status success" : "status error";
+            } catch (e) {
+                status.innerText = "❌ FAILED: " + e.message;
+                status.className = "status error";
+            }
+        }
+
+        // TEST GEM 3A
+        async function testGem3A() {
+            const status = document.getElementById('gem3a-status');
+            status.innerText = "Pinging...";
+            try {
+                // FIXED Endpoint: /ask (was /chat)
+                // FIXED Key: query_text (was query) + added mac_address
+                const res = await fetch(`${PORTS.GEM3A}/ask`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ query_text: "Hello Doctor", mac_address: "DEMO_DEVICE" })
+                });
+                const data = await res.json();
+                status.innerText = res.ok ? "✅ ONLINE" : "❌ ERROR: " + JSON.stringify(data);
+                status.className = res.ok ? "status success" : "status error";
+            } catch (e) {
+                status.innerText = "❌ FAILED: " + e.message;
+                status.className = "status error";
+            }
+        }
+
+        // TEST GEM 3B
+        async function testGem3B() {
+            const status = document.getElementById('gem3b-status');
+            const file = document.getElementById('test-img').files[0];
+            if(!file) { status.innerText = "Select image first"; return; }
+            
+            status.innerText = "Uploading...";
+            const fd = new FormData();
+            fd.append("file", file);
+
+            try {
+                const res = await fetch(`${PORTS.GEM3B}/analyze-leaf`, {
+                    method: 'POST',
+                    body: fd
+                });
+                const data = await res.json();
+                status.innerText = res.ok ? "✅ ONLINE: " + data.prediction : "❌ ERROR: " + JSON.stringify(data);
+                status.className = res.ok ? "status success" : "status error";
+            } catch (e) {
+                status.innerText = "❌ FAILED: " + e.message;
+                status.className = "status error";
+            }
+        }
+    </script>
+</body>
+</html>

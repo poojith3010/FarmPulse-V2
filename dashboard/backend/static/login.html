@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Login - FarmPulse</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script src="/static/js/app.js"></script>
+  <style>
+    @keyframes gradient-animation { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    .animated-gradient { background: linear-gradient(-45deg, #34d399, #2dd4bf, #34d399, #a7f3d0); background-size: 400% 400%; animation: gradient-animation 15s ease infinite; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+    .fade-in-delay-1 { animation-delay: 0.1s; } .fade-in-delay-2 { animation-delay: 0.2s; } .fade-in-delay-3 { animation-delay: 0.3s; } .fade-in-delay-4 { animation-delay: 0.4s; }
+    :root { --background-start-rgb: 0, 10, 5; --background-end-rgb: 0, 24, 12; --foreground-rgb: 240, 240, 240; --card-background-rgba: 255, 255, 255, 0.03; --card-border-rgba: 255, 255, 255, 0.1; }
+    body { background: linear-gradient(to bottom, rgb(var(--background-start-rgb)), rgb(var(--background-end-rgb))); color: rgb(var(--foreground-rgb)); }
+    .glass-card { background: rgba(var(--card-background-rgba)); backdrop-filter: blur(20px); border: 1px solid rgba(var(--card-border-rgba)); }
+    .form-input { background: rgba(0,0,0,0.25); border: 1px solid transparent; color: rgb(var(--foreground-rgb)); transition: border-color 0.3s; }
+    .form-input:focus { outline: none; border-color: rgba(52, 211, 153, 0.7); }
+  </style>
+</head>
+<body class="text-white">
+
+  <div class="flex flex-col items-center justify-center min-h-screen p-6">
+    <div class="w-full max-w-sm text-center">
+      <h1 class="text-4xl font-bold text-white mb-2 font-headings">
+        Welcome to <span id="dynamic-text" class="text-emerald-400">FarmPulse</span>
+      </h1>
+      <p class="text-gray-400 mb-8 fade-in">Login to access your dashboard.</p>
+      
+      <div class="glass-card rounded-2xl p-6 fade-in fade-in-delay-1">
+        <div id="loginForm" class="space-y-4 text-left">
+          <input id="loginEmail" type="email" placeholder="Email" class="w-full p-3 form-input rounded-lg fade-in fade-in-delay-1" />
+          <input id="loginPassword" type="password" placeholder="Password" class="w-full p-3 form-input rounded-lg fade-in fade-in-delay-2" />
+          <div class="flex justify-end fade-in fade-in-delay-3">
+              <!-- FIXED LINK -->
+              <a href="/forgot-password" class="text-sm text-emerald-400 hover:underline">Forgot Password?</a>
+          </div>
+          <button id="loginBtn" class="w-full bg-emerald-500 text-white p-3 rounded-lg font-semibold transition-transform hover:scale-105 !mt-6 fade-in fade-in-delay-4">Login</button>
+          <!-- FIXED LINK -->
+          <p class="text-center text-sm !mt-6 fade-in fade-in-delay-4">Don't have an account? <a href="/signup" class="text-emerald-400 font-semibold hover:underline">Sign Up</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    checkAuth();
+
+    // Dynamic Text
+    const words = ["the Future", "Innovation", "FarmPulse"];
+    let wordIndex = 0;
+    const dynamicText = document.getElementById("dynamic-text");
+    setInterval(() => {
+      dynamicText.style.opacity = 0;
+      setTimeout(() => {
+        wordIndex = (wordIndex + 1) % words.length;
+        dynamicText.textContent = words[wordIndex];
+        dynamicText.style.opacity = 1;
+      }, 500);
+    }, 3000);
+
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value.trim();
+      if (!email || !password) return alert("Please fill all fields");
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) {
+          alert("❌ " + error.message);
+      } else {
+          // FIXED LINK
+          window.location.href = "/dashboard";
+      }
+    });
+  </script>
+</body>
+</html>

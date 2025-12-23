@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>FarmPulse Pro</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.7.0/vanilla-tilt.min.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="/static/js/app.js"></script> 
+
+    <style>
+        :root {
+            --primary: #10b981; 
+            --glass-bg: rgba(5, 10, 8, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.06);
+            --glass-highlight: rgba(255, 255, 255, 0.04);
+        }
+
+        body {
+            margin: 0;
+            background-color: #050505;
+            color: #ecfdf5;
+            font-family: 'Space Grotesk', sans-serif;
+            overflow-x: hidden;
+            padding-bottom: 100px;
+        }
+
+        /* --- 3D Background --- */
+        #canvas-container { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: -2; }
+        
+        .ambient-glow {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 80vw; height: 80vh;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, transparent 70%);
+            z-index: -1; pointer-events: none;
+        }
+
+        /* --- Glass Panel --- */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            border-top: 1px solid var(--glass-highlight);
+            position: relative;
+            overflow: hidden; 
+            transition: border-color 0.3s;
+        }
+
+        /* --- WEATHER ANIMATIONS --- */
+        #weather-bg-fx {
+            position: absolute; inset: 0; z-index: 0; pointer-events: none;
+            border-radius: inherit; overflow: hidden;
+        }
+
+        .rain-drop {
+            position: absolute;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.6));
+            top: -100px;
+            animation: rain-fall linear infinite;
+        }
+        .rain-front { width: 2px; height: 100px; z-index: 3; opacity: 0.8; }
+        .rain-mid { width: 1px; height: 60px; z-index: 2; opacity: 0.4; }
+        .rain-back { width: 1px; height: 40px; z-index: 1; opacity: 0.2; }
+
+        @keyframes rain-fall {
+            0% { transform: translateY(0px) skewX(-5deg); }
+            100% { transform: translateY(500px) skewX(-5deg); }
+        }
+        @keyframes storm-fall {
+            0% { transform: translateY(0px) skewX(-20deg); }
+            100% { transform: translateY(600px) skewX(-20deg); }
+        }
+
+        .sun-flare-container { position: absolute; inset: 0; overflow: hidden; }
+        .sun-wash {
+            position: absolute; top: -50%; right: -30%; width: 150%; height: 150%;
+            background: radial-gradient(circle at center, rgba(251, 191, 36, 0.25), transparent 60%);
+            animation: breathe 8s ease-in-out infinite;
+            mix-blend-mode: screen;
+        }
+        .bokeh-orb {
+            position: absolute; border-radius: 50%;
+            background: rgba(251, 191, 36, 0.2);
+            filter: blur(10px);
+            animation: float-orb linear infinite;
+        }
+        @keyframes breathe { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1.1); } }
+        @keyframes float-orb { 
+            0% { transform: translateY(100px) translateX(0); opacity: 0; } 
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translateY(-100px) translateX(20px); opacity: 0; } 
+        }
+
+        .thunder-flash {
+            position: absolute; inset: 0; background-color: #fff; opacity: 0; z-index: 5; animation: strobe 4s infinite;
+        }
+        .storm-darkness {
+            position: absolute; top: 0; left: 0; width: 100%; height: 60%; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); z-index: 0;
+        }
+        @keyframes strobe {
+            0% { opacity: 0; } 92% { opacity: 0; } 93% { opacity: 0.8; } 94% { opacity: 0; } 96% { opacity: 0.3; } 97% { opacity: 0; } 100% { opacity: 0; }
+        }
+
+        .cloud-fog {
+            position: absolute;
+            background: radial-gradient(closest-side, rgba(255,255,255,0.1), transparent);
+            width: 300px; height: 100px; filter: blur(20px); animation: drift linear infinite;
+        }
+        @keyframes drift { from { transform: translateX(-150%); } to { transform: translateX(150%); } }
+
+        @media (min-width: 1024px) { .dashboard-grid { display: grid; grid-template-columns: 320px 1fr; gap: 24px; align-items: start; } }
+        .scramble-text { font-family: 'Space Grotesk', monospace; letter-spacing: -0.02em; }
+        .grid-overlay { position: fixed; inset: 0; background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 30px 30px; pointer-events: none; z-index: -1; }
+        .nav-link.active { color: var(--primary); }
+        .nav-link.active .icon-box { background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: var(--primary); }
+    </style>
+</head>
+<body class="antialiased selection:bg-emerald-500 selection:text-black">
+
+    <div id="canvas-container"></div>
+    <div class="ambient-glow"></div>
+    <div class="grid-overlay"></div>
+
+    <div class="max-w-7xl mx-auto px-4 md:px-8 pt-8">
+        
+        <div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-4 fade-in">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <div class="w-2 h-8 bg-emerald-500 rounded-full shadow-[0_0_15px_#10b981]"></div>
+                    <h1 class="text-4xl font-bold tracking-tight">FarmPulse</h1>
+                </div>
+                <p class="text-gray-400 text-sm font-light ml-4">Command Center &bull; <span id="clock" class="text-emerald-500 font-mono">--:--</span></p>
+            </div>
+            
+            <button id="logoutBtn" class="glass-panel px-4 py-2 rounded-lg text-xs font-bold text-red-400 hover:bg-red-500/10 transition-colors uppercase tracking-wider border-red-500/20">
+                Disconnect
+            </button>
+        </div>
+
+        <div class="space-y-6">
+            
+            <div class="glass-panel rounded-2xl p-0 relative group min-h-[180px]" data-tilt data-tilt-max="1" data-tilt-speed="1000" data-tilt-glare data-tilt-max-glare="0.05">
+                <div id="weather-bg-fx"></div>
+
+                <div class="relative z-10 flex flex-col md:flex-row items-stretch h-full">
+                    <div class="p-6 md:p-8 flex-1 flex flex-col justify-center border-b md:border-b-0 md:border-r border-white/5">
+                        <div class="flex items-center gap-2 text-emerald-400 mb-2">
+                            <span class="material-icons text-sm animate-pulse">place</span>
+                            <span id="weatherLocation" class="font-bold tracking-wide text-sm uppercase">Loading...</span>
+                        </div>
+                        <div class="flex items-baseline gap-4">
+                            <span id="weatherTemp" class="text-7xl font-bold tracking-tighter text-white drop-shadow-lg">--</span>
+                            <div class="flex flex-col">
+                                <span class="text-2xl text-gray-400">°C</span>
+                                <span id="weatherCondition" class="text-lg text-emerald-100 font-medium">--</span>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-gray-500 text-xs font-mono uppercase" id="weatherDate">--</div>
+                    </div>
+
+                    <div class="p-4 md:px-10 flex items-center justify-around md:gap-16 bg-black/20">
+                        <div class="text-center group-hover:-translate-y-1 transition-transform duration-300">
+                            <span class="material-icons text-cyan-400 text-xl mb-1 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">water_drop</span>
+                            <p class="text-[10px] text-gray-500 uppercase tracking-wider">Rain</p>
+                            <p id="weatherRain" class="font-bold text-lg">--%</p>
+                        </div>
+                        <div class="w-px h-10 bg-white/5"></div>
+                        <div class="text-center group-hover:-translate-y-1 transition-transform duration-300 delay-75">
+                            <span class="material-icons text-blue-400 text-xl mb-1 drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]">thermostat</span>
+                            <p class="text-[10px] text-gray-500 uppercase tracking-wider">Humid</p>
+                            <p id="weatherHumidity" class="font-bold text-lg">--%</p>
+                        </div>
+                        <div class="w-px h-10 bg-white/5"></div>
+                        <div class="text-center group-hover:-translate-y-1 transition-transform duration-300 delay-100">
+                            <span class="material-icons text-gray-400 text-xl mb-1">air</span>
+                            <p class="text-[10px] text-gray-500 uppercase tracking-wider">Wind</p>
+                            <p id="weatherWind" class="font-bold text-lg">--</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="flex justify-between items-end mb-3 px-1">
+                    <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest">Field Telemetry</h2>
+                    <div class="flex items-center gap-2">
+                        <span class="relative flex h-2 w-2">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <span class="text-xs text-emerald-500 font-mono">LIVE FEED</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <div class="glass-panel rounded-xl p-4 flex flex-col justify-between h-32 border-b-2 border-b-orange-500/20 hover:border-b-orange-500 transition-all" data-tilt data-tilt-scale="1.02">
+                        <div class="flex justify-between items-start">
+                            <span class="material-icons text-orange-400 text-xl">thermostat</span>
+                            <span class="text-[10px] text-gray-500 uppercase">Temp</span>
+                        </div>
+                        <p id="sensorTemp" class="text-2xl font-bold mt-2">--</p>
+                    </div>
+                    <div class="glass-panel rounded-xl p-4 flex flex-col justify-between h-32 border-b-2 border-b-blue-500/20 hover:border-b-blue-500 transition-all" data-tilt data-tilt-scale="1.02">
+                        <div class="flex justify-between items-start">
+                            <span class="material-icons text-blue-400 text-xl">water_drop</span>
+                            <span class="text-[10px] text-gray-500 uppercase">Humid</span>
+                        </div>
+                        <p id="sensorHumidity" class="text-2xl font-bold mt-2">--</p>
+                    </div>
+                    <div class="glass-panel rounded-xl p-4 flex flex-col justify-between h-32 border-b-2 border-b-green-500/20 hover:border-b-green-500 transition-all" data-tilt data-tilt-scale="1.02">
+                        <div class="flex justify-between items-start">
+                            <span class="material-icons text-green-400 text-xl">grass</span>
+                            <span class="text-[10px] text-gray-500 uppercase">Soil</span>
+                        </div>
+                        <p id="sensorSoil" class="text-2xl font-bold mt-2">--</p>
+                    </div>
+                    <div class="glass-panel rounded-xl p-4 flex flex-col justify-between h-32 border-b-2 border-b-purple-500/20 hover:border-b-purple-500 transition-all" data-tilt data-tilt-scale="1.02">
+                        <div class="flex justify-between items-start">
+                            <span class="material-icons text-purple-400 text-xl">science</span>
+                            <span class="text-[10px] text-gray-500 uppercase">pH</span>
+                        </div>
+                        <p id="sensorPh" class="text-2xl font-bold mt-2">--</p>
+                    </div>
+                    <div class="glass-panel rounded-xl p-4 flex flex-col justify-between h-32 border-b-2 border-b-cyan-500/20 hover:border-b-cyan-500 transition-all" data-tilt data-tilt-scale="1.02">
+                        <div class="flex justify-between items-start">
+                            <span class="material-icons text-cyan-400 text-xl">umbrella</span>
+                            <span class="text-[10px] text-gray-500 uppercase">Rain</span>
+                        </div>
+                        <p id="sensorRain" class="text-xl font-bold mt-2">--</p>
+                    </div>
+                    <div class="glass-panel rounded-xl p-4 flex flex-col justify-between h-32 border-b-2 border-b-yellow-500/20 hover:border-b-yellow-500 transition-all" data-tilt data-tilt-scale="1.02">
+                        <div class="flex justify-between items-start">
+                            <span class="material-icons text-yellow-500 text-xl">eco</span>
+                            <span class="text-[10px] text-gray-500 uppercase">N-P-K</span>
+                        </div>
+                        <p id="sensorNPK" class="text-lg font-bold mt-2 tracking-tight">--/--/--</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2">
+                    <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">Active Sectors</h2>
+                    <div id="farmList" class="space-y-3">
+                         <div class="glass-panel rounded-xl p-8 flex flex-col items-center justify-center border-dashed border-2 border-white/10 opacity-70">
+                            <span class="material-icons text-4xl text-gray-600 mb-2">sync</span>
+                            <p class="text-gray-400 text-sm">Loading farms...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="glass-panel rounded-xl p-5 flex flex-col justify-center relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-3 opacity-10"><span class="material-icons text-6xl">insights</span></div>
+                    <h3 class="text-xs font-bold text-gray-400 uppercase mb-4">Yield Prediction</h3>
+                    <div class="flex items-end gap-1 h-32 pb-2">
+                        <div class="flex-1 bg-emerald-500/20 rounded-t h-[40%] hover:h-[45%] transition-all duration-500"></div>
+                        <div class="flex-1 bg-emerald-500/30 rounded-t h-[60%] hover:h-[65%] transition-all duration-500"></div>
+                        <div class="flex-1 bg-emerald-500/40 rounded-t h-[50%] hover:h-[55%] transition-all duration-500"></div>
+                        <div class="flex-1 bg-emerald-500/60 rounded-t h-[80%] hover:h-[85%] transition-all duration-500"></div>
+                        <div class="flex-1 bg-emerald-500 rounded-t h-[70%] hover:h-[75%] transition-all duration-500 shadow-[0_0_15px_#10b981]"></div>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-gray-500 uppercase mt-2">
+                        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button id="chatbotBtn" class="fixed bottom-24 right-6 w-14 h-14 bg-emerald-600 hover:bg-emerald-500 rounded-full shadow-[0_0_20px_rgba(16,185,129,0.5)] flex items-center justify-center z-40 transition-transform hover:scale-110 active:scale-95 group">
+        <span class="material-icons text-white text-2xl group-hover:rotate-12 transition-transform">smart_toy</span>
+    </button>
+    
+    <nav class="fixed bottom-0 left-0 right-0 glass-panel border-t border-white/5 h-20 z-50 rounded-t-2xl md:rounded-none backdrop-blur-xl">
+        <div class="flex justify-center items-center h-full gap-8 md:gap-16">
+        
+            <a href="/dashboard" class="nav-link active flex flex-col items-center gap-1 group cursor-pointer">
+                <div class="icon-box w-10 h-8 rounded-lg border border-transparent flex items-center justify-center transition-all">
+                    <span class="material-icons text-xl">dashboard</span>
+                </div>
+                <span class="text-[10px] font-bold uppercase tracking-wide">Dash</span>
+            </a>
+
+            <a href="/prediction" class="nav-link flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors cursor-pointer">
+                <span class="material-icons text-xl">show_chart</span><span class="text-[10px] font-bold uppercase">Predict</span>
+            </a>
+            <a href="/static/research.html" class="nav-link flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors cursor-pointer">
+                <span class="material-icons text-xl">menu_book</span><span class="text-[10px] font-bold uppercase">Research</span>
+            </a>
+            <a href="/static/doctor.html" class="nav-link flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors cursor-pointer">
+                <span class="material-icons text-xl">local_hospital</span><span class="text-[10px] font-bold uppercase">Doctor</span>
+            </a>
+
+        </div>
+    </nav>
+
+    <div id="chatWindow" class="hidden fixed bottom-24 right-6 w-80 glass-panel rounded-2xl flex flex-col z-50 overflow-hidden border border-emerald-500/30 shadow-2xl">
+        <div class="p-4 bg-emerald-900/40 border-b border-white/5 flex justify-between items-center">
+            <h3 class="font-bold text-sm text-emerald-400 flex items-center gap-2 tracking-wide"><span class="material-icons text-xs">hub</span> SYSTEM AI</h3>
+            <button id="closeChat" class="material-icons text-sm opacity-50 hover:opacity-100 transition-opacity">close</button>
+        </div>
+        <div id="chatBox" class="h-64 overflow-y-auto p-4 space-y-3 text-xs">
+            <div class="bg-white/5 p-3 rounded-r-xl rounded-bl-xl border border-white/5 text-gray-300">
+                System online. Monitoring field variables.
+            </div>
+        </div>
+        <div class="p-3 border-t border-white/5 flex gap-2 bg-black/20">
+            <input id="chatInput" type="text" placeholder="Command..." class="flex-1 bg-black/40 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 border border-white/5">
+            <button id="sendChatBtn" class="text-emerald-500 hover:text-emerald-400"><span class="material-icons text-sm">send</span></button>
+        </div>
+    </div>
+
+    <script>
+        checkAuth();
+
+        // --- 1. THREE.JS BACKGROUND ---
+        const initThreeJS = () => {
+            const container = document.getElementById('canvas-container');
+            const scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x050505, 0.035); 
+
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 8;
+            camera.position.y = 2;
+
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            // Terrain
+            const geoPlane = new THREE.PlaneGeometry(120, 120, 50, 50);
+            const pos = geoPlane.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                const x = pos.getX(i);
+                const y = pos.getY(i);
+                pos.setZ(i, Math.sin(x/10) * Math.cos(y/10) * 2.5 + Math.random() * 0.1);
+            }
+            geoPlane.computeVertexNormals();
+            
+            const matPlane = new THREE.MeshStandardMaterial({ 
+                color: 0x022c22,
+                emissive: 0x065f46, 
+                emissiveIntensity: 0.15,
+                wireframe: true, 
+                transparent: true, 
+                opacity: 0.12
+            });
+            const terrain = new THREE.Mesh(geoPlane, matPlane);
+            terrain.rotation.x = -Math.PI / 2.1;
+            terrain.position.y = -3;
+            scene.add(terrain);
+
+            // Particles
+            const particleGeo = new THREE.BufferGeometry();
+            const particleCount = 250;
+            const pArray = new Float32Array(particleCount * 3);
+            for(let i=0; i < particleCount * 3; i++) { pArray[i] = (Math.random() - 0.5) * 60; }
+            particleGeo.setAttribute('position', new THREE.BufferAttribute(pArray, 3));
+            const particleMat = new THREE.PointsMaterial({
+                size: 0.08, color: 0x34d399, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending
+            });
+            const particles = new THREE.Points(particleGeo, particleMat);
+            scene.add(particles);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+            scene.add(ambientLight);
+            const pointLight = new THREE.PointLight(0x10b981, 2, 60); 
+            pointLight.position.set(0, 5, 5);
+            scene.add(pointLight);
+
+            let time = 0;
+            const animate = () => {
+                requestAnimationFrame(animate);
+                time += 0.003;
+                terrain.position.z = (Date.now() * 0.001) % 4; 
+                particles.rotation.y = time * 0.05;
+                if (window.mouseX) {
+                    const targetX = (window.mouseX - window.innerWidth / 2) * 0.0003;
+                    const targetY = (window.mouseY - window.innerHeight / 2) * 0.0003;
+                    camera.rotation.y += 0.03 * (-targetX - camera.rotation.y);
+                    camera.rotation.x += 0.03 * (-targetY - camera.rotation.x);
+                }
+                renderer.render(scene, camera);
+            };
+            animate();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+            window.addEventListener('mousemove', (e) => { window.mouseX = e.clientX; window.mouseY = e.clientY; });
+        };
+
+        // --- 2. WEATHER ANIMATION ENGINE ---
+        function setWeatherAnimation(condition) {
+            const container = document.getElementById('weather-bg-fx');
+            container.innerHTML = ''; 
+            const cond = condition.toLowerCase();
+
+            const createRain = (count, angleClass, speedMultiplier) => {
+                for (let i = 0; i < count; i++) {
+                    const drop = document.createElement('div');
+                    drop.className = 'rain-drop ' + angleClass;
+                    drop.style.left = Math.random() * 100 + '%';
+                    const duration = (Math.random() * 0.5 + 0.5) / speedMultiplier;
+                    drop.style.animationDuration = duration + 's';
+                    drop.style.animationDelay = Math.random() * 2 + 's';
+                    container.appendChild(drop);
+                }
+            };
+
+            if (cond.includes('rain') || cond.includes('drizzle')) {
+                createRain(20, 'rain-front', 1.5);
+                createRain(15, 'rain-mid', 1.0);
+                createRain(10, 'rain-back', 0.7);
+            } else if (cond.includes('sun') || cond.includes('clear')) {
+                const flare = document.createElement('div');
+                flare.className = 'sun-flare-container';
+                const wash = document.createElement('div');
+                wash.className = 'sun-wash';
+                flare.appendChild(wash);
+                for(let i=0; i<5; i++) {
+                    const orb = document.createElement('div');
+                    orb.className = 'bokeh-orb';
+                    const size = Math.random() * 60 + 30;
+                    orb.style.width = size + 'px';
+                    orb.style.height = size + 'px';
+                    orb.style.left = Math.random() * 80 + '%';
+                    orb.style.top = Math.random() * 80 + '%';
+                    orb.style.animationDuration = (Math.random() * 5 + 5) + 's';
+                    flare.appendChild(orb);
+                }
+                container.appendChild(flare);
+            } else if (cond.includes('cloud') || cond.includes('overcast')) {
+                 for(let i=0; i<4; i++) {
+                     const cloud = document.createElement('div');
+                     cloud.className = 'cloud-fog';
+                     cloud.style.top = (Math.random() * 60) + '%';
+                     cloud.style.left = (Math.random() * 50) + '%';
+                     cloud.style.animationDuration = (15 + Math.random() * 10) + 's';
+                     cloud.style.animationDelay = (i * 3) + 's';
+                     container.appendChild(cloud);
+                 }
+            } else if (cond.includes('thunder') || cond.includes('storm')) {
+                const darkness = document.createElement('div');
+                darkness.className = 'storm-darkness';
+                container.appendChild(darkness);
+                const flash = document.createElement('div');
+                flash.className = 'thunder-flash';
+                container.appendChild(flash);
+                const createStormRain = (count, layerClass) => {
+                     for (let i = 0; i < count; i++) {
+                        const drop = document.createElement('div');
+                        drop.className = 'rain-drop ' + layerClass;
+                        drop.style.left = Math.random() * 100 + '%';
+                        drop.style.animationName = 'storm-fall'; 
+                        drop.style.animationDuration = (Math.random() * 0.3 + 0.3) + 's';
+                        drop.style.animationDelay = Math.random() * 2 + 's';
+                        container.appendChild(drop);
+                    }
+                }
+                createStormRain(30, 'rain-front');
+                createStormRain(20, 'rain-mid');
+            }
+        }
+
+        // --- 3. BACKEND LOGIC ---
+        let sensorSubscription = null;
+
+        document.getElementById("logoutBtn").addEventListener("click", async () => {
+            await supabaseClient.auth.signOut();
+            if (sensorSubscription) { sensorSubscription.unsubscribe(); }
+            window.location.href = '/';
+        });
+
+        // Fetch Weather
+        async function loadWeather() {
+            try {
+                const res = await fetch(`/weather`);
+                const data = await res.json();
+                
+                document.getElementById("weatherLocation").textContent = data.location;
+                document.getElementById("weatherTemp").textContent = Math.round(data.temperature_celsius);
+                document.getElementById("weatherCondition").textContent = data.condition;
+                document.getElementById("weatherDate").textContent = data.date;
+                document.getElementById("weatherRain").textContent = `${data.rain_probability}%`;
+                document.getElementById("weatherHumidity").textContent = `${data.humidity_percent}%`;
+                document.getElementById("weatherWind").textContent = `${data.wind_kph} km/h`;
+                
+                setWeatherAnimation(data.condition);
+            } catch (err) { console.error("Weather fetch failed", err); }
+        }
+
+        // Fetch Farms
+        async function loadFarms() {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if(!user) return;
+            const { data } = await supabase.from("farms").select("*").eq("profile_id", user.id);
+            const container = document.getElementById("farmList");
+            container.innerHTML = "";
+
+            if (!data || data.length === 0) { 
+                container.innerHTML = `
+                <div class="glass-panel rounded-xl p-8 flex flex-col items-center justify-center border-dashed border-2 border-white/10 opacity-70 hover:opacity-100 transition-opacity">
+                    <span class="material-icons text-4xl text-gray-600 mb-2">add_location_alt</span>
+                    <p class="text-gray-400 text-sm mb-4">No sectors initialized.</p>
+                    <button class="bg-emerald-600/80 hover:bg-emerald-500 text-white px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider shadow-lg">Add Farm</button>
+                </div>`; 
+                return; 
+            }
+            
+            data.forEach((farm) => {
+                const card = document.createElement("div");
+                card.className = "glass-panel rounded-xl p-4 flex justify-between items-center hover:border-emerald-500/50 transition-all cursor-pointer group mb-2";
+                card.innerHTML = `
+                    <div>
+                         <h4 class="font-bold text-emerald-400 group-hover:text-white transition-colors">${farm.name}</h4>
+                         <p class="text-xs text-gray-500">Area: ${farm.area_hectares} ha</p>
+                    </div>
+                    <span class="material-icons text-gray-600 group-hover:text-emerald-400">chevron_right</span>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Helper Functions
+        function scaleSoilMoisture(val) {
+            if (val > 1023) val = 1023; 
+            if (val < 400) val = 400;
+            let pct = ((1023 - val) * 100) / (1023 - 400);
+            return pct < 0 ? 0 : pct > 100 ? 100 : pct.toFixed(0);
+        }
+
+        function convertVoltageToPh(voltage) {
+            let ph = 7.0 + (voltage - 2.5) * ((7.0 - 4.0) / (2.5 - 3.0));
+            return ph < 0 ? 0 : ph > 14 ? 14 : ph.toFixed(1);
+        }
+
+        function textScramble(element, endText, unit = '') {
+            let iteration = 0;
+            const chars = '0123456789';
+            const originalText = String(endText);
+            const interval = setInterval(() => {
+                element.innerText = originalText.split("").map((letter, index) => {
+                    if(index < iteration) return originalText[index];
+                    return chars[Math.floor(Math.random() * 10)];
+                }).join("") + unit;
+                if(iteration >= originalText.length) clearInterval(interval);
+                iteration += 1/3;
+            }, 30);
+        }
+
+        // Sensor Logic
+        function updateSensorUI(data) {
+            if (!data) return;
+            
+            textScramble(document.getElementById("sensorTemp"), data.temperature ? data.temperature.toFixed(1) : '--', '°C');
+            textScramble(document.getElementById("sensorHumidity"), data.humidity ? data.humidity.toFixed(1) : '--', '%');
+            textScramble(document.getElementById("sensorSoil"), data.soil_moisture ? scaleSoilMoisture(data.soil_moisture) : '--', '%');
+            
+            const phVal = data.ph_value ? convertVoltageToPh(data.ph_value) : '--';
+            document.getElementById("sensorPh").textContent = phVal;
+
+            let rainStatus = '--';
+            if (data.rain_value) {
+                rainStatus = data.rain_value > 900 ? 'Dry' : data.rain_value > 600 ? 'Light' : 'Heavy';
+            }
+            textScramble(document.getElementById("sensorRain"), rainStatus);
+
+            const npkValue = `${data.nitrogen || '--'} / ${data.phosphorus || '--'} / ${data.potassium || '--'}`;
+            document.getElementById("sensorNPK").textContent = npkValue;
+        }
+
+        async function loadSensorData() {
+            // Get Logged In User
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) return;
+
+            // Fetch Sensor Data for THIS User
+            const { data } = await supabaseClient
+                .from("sensor_data")
+                .select("*")
+                .eq("user_id", user.id) 
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle(); // <--- CRITICAL FIX: Changed from .single() to .maybeSingle()
+
+            updateSensorUI(data);
+        }
+
+        function subscribeToSensorData() {
+            if (sensorSubscription) { sensorSubscription.unsubscribe(); }
+            sensorSubscription = supabaseClient.channel('public:sensor_data')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sensor_data' }, async (payload) => {
+                    const { data: { user } } = await supabaseClient.auth.getUser();
+                    if (payload.new.user_id === user.id) {
+                        updateSensorUI(payload.new);
+                    }
+                })
+                .subscribe();
+        }
+
+        function updateClock() {
+            document.getElementById("clock").innerText = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        // Chat Logic
+        document.getElementById("chatbotBtn").onclick = () => document.getElementById("chatWindow").classList.remove("hidden");
+        document.getElementById("closeChat").onclick = () => document.getElementById("chatWindow").classList.add("hidden");
+        document.getElementById("sendChatBtn").addEventListener("click", () => {
+             const input = document.getElementById("chatInput");
+             if(!input.value.trim()) return;
+             const box = document.getElementById("chatBox");
+             box.innerHTML += `<div class='flex justify-end mb-2'><div class='bg-emerald-500/80 text-white p-2 px-3 rounded-lg max-w-xs'>${input.value}</div></div>`;
+             input.value = "";
+             box.scrollTop = box.scrollHeight;
+             setTimeout(() => {
+                box.innerHTML += `<div class='flex justify-start mb-2'><div class='bg-white/10 p-2 px-3 rounded-lg max-w-xs text-gray-300'>Processing query...</div></div>`;
+                box.scrollTop = box.scrollHeight;
+             }, 1000);
+        });
+
+        // --- INIT ---
+        document.addEventListener("DOMContentLoaded", () => {
+            initThreeJS();
+            VanillaTilt.init(document.querySelectorAll("[data-tilt]"), { max: 3, speed: 400, glare: true, "max-glare": 0.1 });
+            
+            // Backend Calls
+            loadWeather();
+            loadFarms();
+            loadSensorData();
+            subscribeToSensorData();
+            
+            setInterval(loadWeather, 1800000); // 30 mins
+            setInterval(updateClock, 1000);
+            updateClock();
+        });
+    </script>
+</body>
+</html>
