@@ -91,20 +91,43 @@ function convertVoltageToPh(voltage) {
 
 function updateSensorUI(data) {
     if (!data) return;
-    if(document.getElementById("sensorTemp")) textScramble(document.getElementById("sensorTemp"), data.temperature ? data.temperature.toFixed(1) : '--', '°C');
-    if(document.getElementById("sensorHumidity")) textScramble(document.getElementById("sensorHumidity"), data.humidity ? data.humidity.toFixed(1) : '--', '%');
-    if(document.getElementById("sensorSoil")) textScramble(document.getElementById("sensorSoil"), data.soil_moisture ? scaleSoilMoisture(data.soil_moisture) : '--', '%');
     
+    // 1. Temperature
+    if(document.getElementById("sensorTemp")) {
+        textScramble(document.getElementById("sensorTemp"), data.temperature ? data.temperature.toFixed(1) : '--', '°C');
+    }
+
+    // 2. Humidity
+    if(document.getElementById("sensorHumidity")) {
+        textScramble(document.getElementById("sensorHumidity"), data.humidity ? data.humidity.toFixed(1) : '--', '%');
+    }
+
+    // 3. Soil Moisture (keeping existing scaling logic)
+    if(document.getElementById("sensorSoil")) {
+        textScramble(document.getElementById("sensorSoil"), data.soil_moisture ? scaleSoilMoisture(data.soil_moisture) : '--', '%');
+    }
+    
+    // 4. pH Value (Direct value for RS485, or keep conversion if using analog simulator)
     const phEl = document.getElementById("sensorPh");
-    if(phEl) phEl.textContent = data.ph_value ? convertVoltageToPh(data.ph_value) : '--';
+    if(phEl) {
+        // RS485 usually sends actual pH (e.g. 7.2). If you still send raw voltage, keep convertVoltageToPh.
+        // Assuming raw value for now based on your existing code:
+        phEl.textContent = data.ph_value ? convertVoltageToPh(data.ph_value) : '--';
+    }
 
-    let rainStatus = '--';
-    if (data.rain_value) rainStatus = data.rain_value > 900 ? 'Dry' : data.rain_value > 600 ? 'Light' : 'Heavy';
-    const rainEl = document.getElementById("sensorRain");
-    if(rainEl) textScramble(rainEl, rainStatus);
+    // --- NEW: ELECTRICAL CONDUCTIVITY (Replaces Rain) ---
+    const ecEl = document.getElementById("sensorEc");
+    if(ecEl) {
+        // RS485 sensors return integer values (e.g., 500, 1200)
+        const ecVal = data.electrical_conductivity ? data.electrical_conductivity : '--';
+        textScramble(ecEl, ecVal);
+    }
 
+    // 5. NPK
     const npkEl = document.getElementById("sensorNPK");
-    if(npkEl) npkEl.textContent = `${data.nitrogen || '--'} / ${data.phosphorus || '--'} / ${data.potassium || '--'}`;
+    if(npkEl) {
+        npkEl.textContent = `${data.nitrogen || '--'} / ${data.phosphorus || '--'} / ${data.potassium || '--'}`;
+    }
 }
 
 async function loadSensorData() {

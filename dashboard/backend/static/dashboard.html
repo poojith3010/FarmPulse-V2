@@ -232,10 +232,10 @@
                     </div>
                     <div class="glass-panel rounded-xl p-4 flex flex-col justify-between h-32 border-b-2 border-b-cyan-500/20 hover:border-b-cyan-500 transition-all" data-tilt data-tilt-scale="1.02">
                         <div class="flex justify-between items-start">
-                            <span class="material-icons text-cyan-400 text-xl">umbrella</span>
-                            <span class="text-[10px] text-gray-500 uppercase">Rain</span>
+                            <span class="material-icons text-cyan-400 text-xl">bolt</span> 
+                            <span class="text-[10px] text-gray-500 uppercase">Elec-Con</span>
                         </div>
-                        <p id="sensorRain" class="text-xl font-bold mt-2">--</p>
+                        <p id="sensorEc" class="text-xl font-bold mt-2">--</p>
                     </div>
                     <div class="glass-panel rounded-xl p-4 flex flex-col justify-between h-32 border-b-2 border-b-yellow-500/20 hover:border-b-yellow-500 transition-all" data-tilt data-tilt-scale="1.02">
                         <div class="flex justify-between items-start">
@@ -572,11 +572,8 @@
             const phVal = data.ph_value ? convertVoltageToPh(data.ph_value) : '--';
             document.getElementById("sensorPh").textContent = phVal;
 
-            let rainStatus = '--';
-            if (data.rain_value) {
-                rainStatus = data.rain_value > 900 ? 'Dry' : data.rain_value > 600 ? 'Light' : 'Heavy';
-            }
-            textScramble(document.getElementById("sensorRain"), rainStatus);
+            const ecValue = data.electrical_conductivity ? data.electrical_conductivity : '--'; 
+            textScramble(document.getElementById("sensorEc"), ecValue);
 
             const npkValue = `${data.nitrogen || '--'} / ${data.phosphorus || '--'} / ${data.potassium || '--'}`;
             document.getElementById("sensorNPK").textContent = npkValue;

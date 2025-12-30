@@ -44,6 +44,7 @@ class SensorData(BaseModel):
     soil_moisture: float = None
     ph_value: float = None
     rain_value: float = None
+    electrical_conductivity: float = None
     nitrogen: float = None
     phosphorus: float = None
     potassium: float = None
@@ -157,6 +158,7 @@ async def log_hardware_data(data: SensorData):
             "soil_moisture": data.soil_moisture,
             "ph_value": data.ph_value,
             "rain_value": data.rain_value,
+            "electrical_conductivity": data.electrical_conductivity,
             "nitrogen": data.nitrogen,
             "phosphorus": data.phosphorus,
             "potassium": data.potassium
